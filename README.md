@@ -1,1 +1,1 @@
-ApplyPilot Business is an AI-powered hiring platform that helps employers quickly screen resumes, compare candidates to job requirements, and identify the best fits. It saves time, simplifies recruiting, and helps businesses make smarter hiring decisions.
+

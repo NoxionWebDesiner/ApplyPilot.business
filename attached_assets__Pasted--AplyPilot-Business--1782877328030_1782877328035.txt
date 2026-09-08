@@ -1,0 +1,38 @@
+# Резюме необходимых правок и фиксов — AplyPilot Business
+
+## 🔴 Блокеры (без них не собирается / не запускается)
+
+| # | Файл | Проблема | Фикс |
+|---|---|---|---|
+| 1 | [lib/replit-auth-web/tsconfig.json](lib/replit-auth-web/tsconfig.json) | Нет composite: true → TS6306 | Добавить "composite": true, "declarationMap": true, "emitDeclarationOnly": true (как в `api-client-react`) |
+| 2 | [use-auth.ts:45](lib/replit-auth-web/src/use-auth.ts:45) | import.meta.env не типизирован → TS2339 | Добавить "types": ["vite/client"] в tsconfig пакета |
+| 3 | env / [replit.md](replit.md) | Не задокументированы обязательные env | Заполнить DATABASE_URL, REPL_ID, ISSUER_URL, STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET, AI_INTEGRATIONS_OPENAI_*, PORT, BASE_PATH + drizzle-kit push |
+
+## 🟠 Функциональные баги (собирается, но работает неверно)
+
+| # | Файл | Проблема | Фикс |
+|---|---|---|---|
+| 4 | [app.ts:13](artifacts/api-server/src/app.ts:13) + [routes/stripe.ts:52](artifacts/api-server/src/routes/stripe.ts:52) | Оплата не начисляет кредиты: рабочий webhook перекрыт и недостижим | Оставить один webhook (raw-body из app.ts) и перенести в него начисление кредитов по metadata.userId/credits |
+| 5 | [vite.config.ts](artifacts/aplypilot-business/vite.config.ts) | Нет proxy → в dev фронт не достаёт /api | Добавить server.proxy /api → http://localhost:5000 |
+| 6 | [analyze.ts:26-39](artifacts/api-server/src/routes/analyze.ts:26), [mca.ts](artifacts/api-server/src/routes/mca.ts) | Гонка кредитов (проверка и списание — раздельные запросы) | Атомарный UPDATE ... WHERE credits >= N RETURNING |
+| 7 | [analyze.ts:80](artifacts/api-server/src/routes/analyze.ts:80), mca.ts | Хрупкий парсинг JSON через regex | Использовать response_format: { type: "json_object" } |
+
+## 🟡 Дубли и мёртвый код (чистка)
+
+| # | Что | Где | Действие |
+|---|---|---|---|
+| 8 | Дубль Stripe webhook | routes/stripe.ts | Удалить мёртвый обработчик (после фикса №4) |
+| 9 | Две toast-системы, обе не используются | ui/sonner.tsx, ui/toast*.tsx, hooks/use-toast.ts | Удалить (либо реально задействовать) |
+| 10 | ~50 unused shadcn-компонентов | components/ui/* | Оставить только button/card/textarea/tooltip (+ toaster, если №9 задействуют) |
+| 11 | Неэкспортируемые схемы БД | [conversations.ts](lib/db/src/schema/conversations.ts), [messages.ts](lib/db/src/schema/messages.ts) | Удалить или подключить в schema/index.ts |
+| 12 | SignInGate дублируется | Analyze.tsx + MCA.tsx | Вынести в общий компонент |
+| 13 | recommendationConfig дублируется | Analyze.tsx + MCA.tsx | Вынести в общий модуль |
+| 14 | Navbar дублируется | Home.tsx + Pricing.tsx | Вынести в общий компонент |
+| 15 | mockup-sandbox — Replit dev-инструмент | artifacts/ | Исключить из прод-сборки |
+
+## Порядок выполнения
+1. Сначала №1–2 (build зелёный) → 2. №4–5 (оплата + dev-связка работают) → 3. №6–7 (надёжность) → 4. №8–15 (чистка).
+
+Отсутствие тестов (нет ни одного) — отдельный пункт: после фиксов стоит добавить хотя бы smoke-тесты на роуты analyze/mca/credits/stripe.
+
+Готов начать реализацию с блокеров (№1–5) — скажи, и приступлю.
